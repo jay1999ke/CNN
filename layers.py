@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-import torch.nn.functional as op
-
+import torch.nn.functional as F
 
 class Convolutional(object):
 
@@ -18,8 +17,8 @@ class Convolutional(object):
         self.next=None
 
         #parameters
-        self.filter = torch.tensor(0.09 * np.random.randn(filter_shape[0], filter_shape[0],no_channels)).type(torch.FloatTensor).cuda()
-        self.bias = torch.tensor(0.09 * np.random.randn(no_channels,1)).type(torch.FloatTensor).cuda()
+        self.filter = torch.tensor(0.09 * np.random.randn(no_channels,in_dimentions[2],filter_shape[0], filter_shape[0])).type(torch.FloatTensor).cuda()
+        self.bias = torch.tensor(0.09 * np.random.randn(no_channels)).type(torch.FloatTensor).cuda()
 
         #activations calculations
         (n_h, n_w, n_c) = in_dimentions
@@ -30,11 +29,21 @@ class Convolutional(object):
 
         print("CONV", self.filter.size())
 
+    def conv_forward(self,input_block):
+
+        self.activations = F.conv2d(input=input_block,
+            weight=self.filter,
+            bias=self.bias,
+            stride=(self.stride,self.stride),
+            padding = (self.padding,self.padding)
+        )
+
+
 
 
 class Pooling(object):
 
-    def __init__(self,in_dimentions,filter_shape,stride,padding,pre):
+    def __init__(self,in_dimentions,filter_shape,stride,padding,pre,type):
         
         #imp info
         self.in_dimentions = in_dimentions
@@ -43,6 +52,7 @@ class Pooling(object):
         self.stride = stride
         self.padding = padding
         self.prev = pre
+        self.type = type
         self.next=None
 
         #activations calculations
@@ -52,6 +62,24 @@ class Pooling(object):
         self.out_dimentions = (n_h, n_w,n_c)
 
         print("POOL", self.filter_shape)
+
+    def pool_forward(self,input_block):
+
+        if self.type == "AVG":
+            self.activations = F.avg_pool2d(input=input_block,
+                kernal_size=self.filter_shape,
+                stride=(self.stride,self.stride),
+                padding = (self.padding,self.padding)
+            )
+
+        if self.type == "MAX":
+            self.activations = F.max_pool2d(input=input_block,
+                kernal_size=self.filter_shape,
+                stride=(self.stride,self.stride),
+                padding = (self.padding,self.padding)
+            )
+
+
 
 
 class Dense(object):

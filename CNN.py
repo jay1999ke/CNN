@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from csvr import datareader
 import scipy.io as mat
 import torch
 import torch.nn.functional as op
@@ -68,7 +67,8 @@ class CNN(object):
                     filter_shape=layer["filter_shape"],
                     stride=layer["stride"],
                     padding=layer["padding"],
-                    pre=pre
+                    pre=pre,
+                    type=layer["p_type"]
                 )
 
                 if i != 0:
@@ -80,9 +80,6 @@ class CNN(object):
                 
         return model
 
-    def conv(layer,img,w,bias):
-        return op.conv2d(input=img, weight=w, bias=bias, stride=layer["stride"], padding=layer["padding"], dilation=1, groups=1, padding_mode='zeros')
-
 
 
 
@@ -91,9 +88,9 @@ if __name__ == "__main__":
 
     NN_ARCHITECTURE = [
         {"type": "CONV", "filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
-        {"type": "POOL", "filter_shape": (2,2),"stride":2,"padding":0},
+        {"type": "POOL","p_type":"AVG", "filter_shape": (2,2),"stride":2,"padding":0},
         {"type": "CONV", "filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
-        {"type": "POOL", "filter_shape": (2,2),"stride":2,"padding":0},
+        {"type": "POOL","p_type":"AVG",  "filter_shape": (2,2),"stride":2,"padding":0},
         {"type": "Dense", "no_logits": 10},
     ]
 
