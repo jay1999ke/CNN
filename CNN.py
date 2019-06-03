@@ -27,7 +27,7 @@ class CNN(object):
         #dimentions = self.data.img_dim
         pre=None
 
-        dimentions = (28,28,1)
+        dimentions = (20,20,1)
 
         for i,layer in enumerate(self.architecture):
 
@@ -39,7 +39,8 @@ class CNN(object):
                     no_channels=layer["no_channels"],
                     stride=layer["stride"],
                     padding=layer["padding"],
-                    pre=pre
+                    pre=pre,
+                    activation = layer["activation"]
                 )
 
                 if i != 0:
@@ -52,7 +53,8 @@ class CNN(object):
             elif l_type == "Dense":
                 dense = Dense(in_dimentions=dimentions,
                     no_logits=layer["no_logits"],
-                    pre=pre
+                    pre=pre,
+                    activation = layer["activation"]
                 )
 
                 if i != 0:
@@ -80,6 +82,14 @@ class CNN(object):
                 
         return model
 
+    def forward(self):
+        input_block = self.data.X
+
+        for i,layer in enumerate(self.model):           
+
+            input_block = layer.forward(input_block)
+
+        return input_block
 
 
 
@@ -87,11 +97,11 @@ if __name__ == "__main__":
     
 
     NN_ARCHITECTURE = [
-        {"type": "CONV", "filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
+        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
         {"type": "POOL","p_type":"AVG", "filter_shape": (2,2),"stride":2,"padding":0},
-        {"type": "CONV", "filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
+        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
         {"type": "POOL","p_type":"AVG",  "filter_shape": (2,2),"stride":2,"padding":0},
-        {"type": "Dense", "no_logits": 10},
+        {"type": "Dense","activation":"sigmoid", "no_logits": 10},
     ]
 
     q = CNN(NN_ARCHITECTURE,0)
