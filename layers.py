@@ -1,7 +1,7 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torch.nn.functional as F
+from functional import Activation
 
 
 class Convolutional(object):
@@ -19,8 +19,8 @@ class Convolutional(object):
         self.activation = Activation(activation)
 
         #parameters
-        self.filter = torch.tensor(0.09 * np.random.randn(no_channels,in_dimentions[2],filter_shape[0], filter_shape[0])).type(torch.FloatTensor).cuda()
-        self.bias = torch.tensor(0.09 * np.random.randn(no_channels)).type(torch.FloatTensor).cuda()
+        self.filter = 0.09 *torch.randn(no_channels,in_dimentions[2],filter_shape[0], filter_shape[0]).cuda()
+        self.bias = 0.09 * torch.randn(no_channels).cuda()
 
         #activations calculations
         (n_h, n_w, n_c) = in_dimentions
@@ -71,9 +71,9 @@ class Pooling(object):
 
         if self.type == "AVG":
             self.activations = F.avg_pool2d(input=input_block,
-                kernal_size=self.filter_shape,
                 stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding)
+                kernel_size = self.filter_shape,
+                padding = (self.padding,self.padding),
             )
 
         if self.type == "MAX":
@@ -104,7 +104,7 @@ class Pooling(object):
             )
             mask[mask !=0 ] = 1
 
-        return mask
+        return mask.cuda()
 
     def propagateError(self):
         pass
@@ -121,14 +121,14 @@ class Dense(object):
         self.activation = Activation(activation)
 
         if isinstance(pre, Dense):
-            in_n = pre.out_dimentions[0]
+            in_n = pre.out_dimentions[1]
         else:
             (n_h, n_w, n_c) = pre.out_dimentions
             in_n = n_c*n_h*n_w
 
         #parameters
-        self.theta = torch.tensor(0.09 * np.random.randn(int(in_n),int(no_logits))).type(torch.FloatTensor).cuda()
-        self.bias = torch.tensor(0.09 * np.random.randn(no_logits,1)).type(torch.FloatTensor).cuda()
+        self.theta = 0.09 * torch.randn(int(in_n),int(no_logits)).cuda()
+        self.bias = 0.09 * torch.randn(1,no_logits).cuda()
                 
 
         #activations calculations
@@ -139,49 +139,8 @@ class Dense(object):
     def forward(self,input_block):
         
         if not isinstance(self.prev, Dense):
-            input_block = input_block.view(self.prev.out_dimentions[0],-1)
+            input_block = input_block.view(int(input_block.size()[0]),-1)
         self.Z = torch.mm(input_block,self.theta) + self.bias
         self.activations = self.activation.activate(self.Z)
         return self.activations
-
-
-
-class Activation(object):
-
-    def __init__(self,type):
-        self.type = type.lower()
-
-    def activate(self,data):
-
-        type = self.type
-
-        if type == "tanh":
-            return torch.tanh(data)
-        elif type == "sigmoid":
-            return torch.sigmoid(data)
-        elif type == "relu":
-            return torch.relu(data)
-
-    def derivative(self,data):
-
-        type = self.type
-
-        if type == "tanh":
-            tanh = torch.tanh(data)
-            return 1 - tanh*tanh
-        elif type == "sigmoid":
-            sig = torch.sigmoid(data)
-            return sig*(1-sig)
-        elif type == "relu":
-            data[data <= 0] = 0
-            data[data > 0] = 1
-            return data
-
-
-
-
-
-
-
-
-
+        

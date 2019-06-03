@@ -1,18 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import scipy.io as mat
 import torch
 import torch.nn.functional as op
 from layers import Convolutional, Pooling, Dense
-
-class dataSet(object):
-    def __init__(self, X, y,img_dim):
-        self.X = X.cuda()
-        self.y = y.cuda()
-
-        #dims
-        # (n_h, n_w,n_c)
-        self.img_dim = img_dim
+from functional import Activation,Cost
 
 
 class CNN(object):
@@ -23,11 +13,10 @@ class CNN(object):
         self.model = self.createModel()
 
     def createModel(self):
+        print("\n")
         model = []
-        #dimentions = self.data.img_dim
+        dimentions = self.data.img_dim
         pre=None
-
-        dimentions = (20,20,1)
 
         for i,layer in enumerate(self.architecture):
 
@@ -79,29 +68,23 @@ class CNN(object):
                 dimentions = pool.out_dimentions
                 pre = pool
                 model.append(pool)
+
+        print("\n")
                 
         return model
 
     def forward(self):
         input_block = self.data.X
 
-        for i,layer in enumerate(self.model):           
+        for i,layer in enumerate(self.model):       
 
             input_block = layer.forward(input_block)
+            print("Layer ", i)    
 
-        return input_block
+        self.activations = input_block
+        return self.activations
 
+    def cost(self):
+        cross_entropy = Cost("cross_entropy")
 
-
-if __name__ == "__main__":
-    
-
-    NN_ARCHITECTURE = [
-        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
-        {"type": "POOL","p_type":"AVG", "filter_shape": (2,2),"stride":2,"padding":0},
-        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
-        {"type": "POOL","p_type":"AVG",  "filter_shape": (2,2),"stride":2,"padding":0},
-        {"type": "Dense","activation":"sigmoid", "no_logits": 10},
-    ]
-
-    q = CNN(NN_ARCHITECTURE,0)
+        return cross_entropy.calculate(self.activations,self.data.y)
