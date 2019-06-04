@@ -43,13 +43,12 @@ if __name__ == "__main__":
 
     NN_ARCHITECTURE = [
         {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
-        {"type": "POOL","p_type":"AVG", "filter_shape": (2,2),"stride":2,"padding":0},
-        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
-        {"type": "POOL","p_type":"AVG",  "filter_shape": (2,2),"stride":2,"padding":0},
+        {"type": "POOL","p_type":"MAX", "filter_shape": (2,2),"stride":2,"padding":0},
+        {"type": "CONV", "activation":"relu","filter_shape": (3,3),"no_channels":12,"stride":1,"padding":0},
+        {"type": "POOL","p_type":"MAX",  "filter_shape": (2,2),"stride":1,"padding":0},
         {"type": "Dense","activation":"sigmoid", "no_logits": 10},
     ]
 
     q = CNN(NN_ARCHITECTURE,data)
-    q.forward()
-    print(q.cost()*100)
-    q.backward()
+    q.fit(0.00005,20)
+

@@ -106,6 +106,10 @@ class Convolutional(object):
 
         return error
 
+    def update(self,learning_rate):
+        self.filter -= learning_rate*self.filter_grad
+        self.bias -= learning_rate*self.bias_grad
+
 class Pooling(object):
 
     def __init__(self,in_dimentions,filter_shape,stride,padding,pre,type):
@@ -139,10 +143,10 @@ class Pooling(object):
 
         if self.type == "MAX":
             self.activations,self.indices = F.max_pool2d(input=input_block,
-                kernal_size=self.filter_shape,
+                kernel_size=self.filter_shape,
                 stride=(self.stride,self.stride),
                 padding = (self.padding,self.padding),
-                return_indices=True
+                return_indices=True,
             )
         
         return self.activations
@@ -250,3 +254,7 @@ class Dense(object):
                 int(self.in_dimentions[0]),	
                 int(self.in_dimentions[1])	
             )
+
+    def update(self,learning_rate):
+        self.theta -= learning_rate*self.theta_grad
+        self.bias -= learning_rate*self.bias_grad

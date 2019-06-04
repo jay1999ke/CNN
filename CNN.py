@@ -79,7 +79,6 @@ class CNN(object):
         for i,layer in enumerate(self.model):       
 
             input_block = layer.forward(input_block)
-            print("Layer ", i)    
 
         self.activations = input_block
         return self.activations
@@ -90,8 +89,10 @@ class CNN(object):
         return cross_entropy.calculate(self.activations,self.data.y)
 
     def backward(self):
-        
-        error = self.activations - self.data.y_one_hot
+        A = self.activations
+        y = self.data.y_one_hot
+        epsilon = 0.0000001
+        error = -(y/(A+epsilon) - (1-y)/(1-A+epsilon))
 
         list_len = len(self.model)-1
         for i,layer in enumerate(self.model[::-1]):
@@ -99,4 +100,20 @@ class CNN(object):
 
             error = layer.backward(error)
 
-            print("Layer ", i,error.size())
+    def update(self):
+
+        for i,layer in enumerate(self.model[::-1]):
+
+            if not isinstance(layer,Pooling):
+                layer.update(self.alpha)
+
+    def fit(self,learning_rate,epochs):
+        self.alpha = learning_rate
+        self.epochs = epochs
+
+        for i in range(epochs):
+            self.forward()
+            self.backward()
+            self.update()
+
+            print(i,self.cost())
