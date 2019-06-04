@@ -6,7 +6,7 @@ class dataSet(object):
     def __init__(self, X, y,img_dim,y_one_hot):
         self.X = X.cuda()
         self.y = y.cuda()
-        self.y_one_hot = y_one_hot
+        self.y_one_hot = y_one_hot.cuda()
 
         #dims
         # (n_h, n_w,n_c)

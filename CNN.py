@@ -97,8 +97,6 @@ class CNN(object):
         for i,layer in enumerate(self.model[::-1]):
             i=list_len-i
 
-
             error = layer.backward(error)
 
-            print("Layer ", i,layer.activations.size())    
-
+            print("Layer ", i,error.size())

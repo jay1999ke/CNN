@@ -98,7 +98,10 @@ class Pooling(object):
 
         if self.type == "AVG":
             
-            mask = torch.ones(self.in_dimentions[2],self.in_dimentions[3])/(self.filter_shape[0]*self.filter_shape[1])
+            mask = torch.ones(self.in_dimentions[2],
+                self.in_dimentions[0],
+                self.in_dimentions[1]
+            )/(self.filter_shape[0]*self.filter_shape[1])
 
         if self.type == "MAX":
 
@@ -113,9 +116,19 @@ class Pooling(object):
         return mask.cuda()
 
     def backward(self,error):
-        """incomplete"""
-        error = None
-        return error
+
+        ones_filter = torch.ones(self.in_dimentions[2],
+            self.in_dimentions[2],
+            self.filter_shape[0],
+            self.filter_shape[1]
+        ).cuda()
+        error = F.conv_transpose2d(input=error,
+            weight=ones_filter,
+            stride=(self.stride,self.stride),
+            padding = (self.padding,self.padding),
+        )
+        prev_layer_error = error * self.unpoolMask()
+        return prev_layer_error
 
 class Dense(object):
 
@@ -155,14 +168,21 @@ class Dense(object):
 
     def backward(self,error):
 
-        delta = error * self.activation.derivative(self.activation)
+        delta = error * self.activation.derivative(self.activations)
         self.bias_grad = delta.mean(0).view(1,self.no_logits)
-        self.theta_grad = torch.mm(self.prev.activations.transpose(1,0),delta)
 
+        if isinstance(self.prev,Dense):
+            self.theta_grad = torch.mm(self.prev.activations.transpose(1,0),delta)
 
-        if isinstance(layer.prev,Dense):
             return torch.mm(delta,self.theta.transpose(1,0))
         elif isinstance(self.prev,Pooling):
-            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],self.in_dimentions[2],self.in_dimentions[0],self.in_dimentions[1])
+            prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)
+            self.theta_grad = torch.mm(prev_activations,delta)
+
+            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],
+                int(self.in_dimentions[2]),
+                int(self.in_dimentions[0]),
+                int(self.in_dimentions[1])
+            )
         else:
             return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],self.in_dimentions[2],self.in_dimentions[0],self.in_dimentions[1])
