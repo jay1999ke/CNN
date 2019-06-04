@@ -16,6 +16,7 @@ class Convolutional(object):
         self.padding = padding
         self.prev = pre
         self.next=None
+        self.filter_grad = None
         self.activation = Activation(activation)
 
         #parameters
@@ -46,47 +47,44 @@ class Convolutional(object):
 
     def backward(self,error):
 
-
-        delta = error * self.activation.derivative(self.activations)
+        delta = error * self.activation.derivative(self.activations)	        
         self.bias_grad = delta.mean(0).mean(1).mean(1).view(self.no_channels)
-
-
-
+        
         if isinstance(self.prev,Pooling):
+            fil_error = F.conv2d(input = self.prev.activations,
+                weight = delta,
+                stride = (self.stride,self.stride),
+                padding = (self.padding,self.padding)
+                )
 
-            print("\n", self.activations.size(),
-                "\n", self.prev.activations.size() ,
-                "\n", self.filter.size() ,
-                "\n", delta.size(),
-            )
+            self.filter_grad = fil_error
 
-
-            """ grad calculation"""
-            self.filter_grad = F.conv_transpose2d(input=self.prev.activations,
-                weight=delta,
-                bias = self.bias,
+            error = F.conv_transpose2d(input = delta,
+                weight = self.filter,
                 stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding),
-            )
-
-            """prev layer error calculation"""
-            error = F.conv_transpose2d(input=delta,
-                weight=self.filter,
-                stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding),
+                padding = (self.padding,self.padding)
             )
 
         else:
-            error = F.conv_transpose2d(input=delta,
-                weight=self.filter,
+
+            fil_error = F.conv2d(input = self.prev.activations,
+                weight = delta,
+                stride = (self.stride,self.stride),
+                padding = (self.padding,self.padding)
+                )
+
+            self.filter_grad = fil_error
+            print(self.filter_grad.size(),self.filter.size())
+
+            #check for derivation of prev layer error when prev="CONV"
+            error = F.conv_transpose2d(input = delta,
+                weight = self.filter,
                 stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding),
+                padding = (self.padding,self.padding)
             )
-            pass
+            
 
         return error
-
-
 
 class Pooling(object):
 
@@ -154,7 +152,6 @@ class Pooling(object):
 
     def backward(self,error):
 
-        """prev layer error calculation"""
         ones_filter = torch.ones(self.in_dimentions[2],
             self.in_dimentions[2],
             self.filter_shape[0],
@@ -212,31 +209,24 @@ class Dense(object):
         if isinstance(self.prev,Dense):
             self.theta_grad = torch.mm(self.prev.activations.transpose(1,0),delta)
 
-            """prev layer error calculation"""
             return torch.mm(delta,self.theta.transpose(1,0))
-
         elif isinstance(self.prev,Pooling):
-
-            """ grad calculation"""
             prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)
             self.theta_grad = torch.mm(prev_activations,delta)
 
-            """prev layer error calculation"""
             return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],
                 int(self.in_dimentions[2]),
                 int(self.in_dimentions[0]),
                 int(self.in_dimentions[1])
             )
-
         else:
+            """ grad calculation"""	
+            prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)	
+            self.theta_grad = torch.mm(prev_activations,delta)	
 
-            """ grad calculation"""
-            prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)
-            self.theta_grad = torch.mm(prev_activations,delta)
-
-            """prev layer error calculation"""
-            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],
-                int(self.in_dimentions[2]),
-                int(self.in_dimentions[0]),
-                int(self.in_dimentions[1])
+            """prev layer error calculation"""	
+            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],	
+                int(self.in_dimentions[2]),	
+                int(self.in_dimentions[0]),	
+                int(self.in_dimentions[1])	
             )
