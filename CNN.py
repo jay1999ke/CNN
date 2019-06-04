@@ -88,3 +88,17 @@ class CNN(object):
         cross_entropy = Cost("cross_entropy")
 
         return cross_entropy.calculate(self.activations,self.data.y)
+
+    def backward(self):
+        
+        error = self.activations - self.data.y_one_hot
+
+        list_len = len(self.model)-1
+        for i,layer in enumerate(self.model[::-1]):
+            i=list_len-i
+
+
+            error = layer.backward(error)
+
+            print("Layer ", i,layer.activations.size())    
+

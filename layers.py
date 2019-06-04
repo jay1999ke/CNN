@@ -44,6 +44,12 @@ class Convolutional(object):
 
         return self.activations
 
+    def backward(self,error):
+        """incomplete"""
+        error = None
+        return error
+
+
 
 class Pooling(object):
 
@@ -106,8 +112,10 @@ class Pooling(object):
 
         return mask.cuda()
 
-    def propagateError(self):
-        pass
+    def backward(self,error):
+        """incomplete"""
+        error = None
+        return error
 
 class Dense(object):
 
@@ -144,3 +152,17 @@ class Dense(object):
         self.activations = self.activation.activate(self.Z)
         return self.activations
         
+
+    def backward(self,error):
+
+        delta = error * self.activation.derivative(self.activation)
+        self.bias_grad = delta.mean(0).view(1,self.no_logits)
+        self.theta_grad = torch.mm(self.prev.activations.transpose(1,0),delta)
+
+
+        if isinstance(layer.prev,Dense):
+            return torch.mm(delta,self.theta.transpose(1,0))
+        elif isinstance(self.prev,Pooling):
+            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],self.in_dimentions[2],self.in_dimentions[0],self.in_dimentions[1])
+        else:
+            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],self.in_dimentions[2],self.in_dimentions[0],self.in_dimentions[1])

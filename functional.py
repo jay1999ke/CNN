@@ -3,9 +3,10 @@ import torch
 import torch.nn.functional as F
 
 class dataSet(object):
-    def __init__(self, X, y,img_dim):
+    def __init__(self, X, y,img_dim,y_one_hot):
         self.X = X.cuda()
         self.y = y.cuda()
+        self.y_one_hot = y_one_hot
 
         #dims
         # (n_h, n_w,n_c)

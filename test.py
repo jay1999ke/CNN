@@ -30,9 +30,16 @@ if __name__ == "__main__":
 
 
     y = raw_data['y'].ravel()
-    y = torch.tensor(y).type(torch.LongTensor)
 
-    data = dataSet(X,y,(20,20,1))
+    Y = np.zeros((5000, 10), dtype='uint8')
+
+    for i, row in enumerate(Y):
+        Y[i, y[i] - 1] = 1
+
+    y = torch.tensor(y).type(torch.LongTensor)
+    Y = torch.tensor(Y).type(torch.LongTensor)
+
+    data = dataSet(X,y,(20,20,1),Y)
 
     NN_ARCHITECTURE = [
         {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
@@ -45,3 +52,4 @@ if __name__ == "__main__":
     q = CNN(NN_ARCHITECTURE,data)
     q.forward()
     print(q.cost()*100)
+    q.backward()
