@@ -42,6 +42,9 @@ if __name__ == "__main__":
     data = dataSet(X,y,(20,20,1),Y)
 
     NN_ARCHITECTURE = [
+        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
+        {"type": "POOL","p_type":"AVG", "filter_shape": (2,2),"stride":2,"padding":0},
+        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
         {"type": "POOL","p_type":"AVG",  "filter_shape": (2,2),"stride":2,"padding":0},
         {"type": "Dense","activation":"sigmoid", "no_logits": 10},
     ]
