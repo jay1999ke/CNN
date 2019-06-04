@@ -63,8 +63,6 @@ class Convolutional(object):
 
         return error
 
-
-
 class Pooling(object):
 
     def __init__(self,in_dimentions,filter_shape,stride,padding,pre,type):
