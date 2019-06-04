@@ -32,6 +32,9 @@ class Convolutional(object):
 
         print("CONV", self.filter.size())
 
+    def get(self,model):
+        print(model.data.X.size())
+
     def forward(self,input_block):
 
         convolutions = F.conv2d(input=input_block,
@@ -51,13 +54,26 @@ class Convolutional(object):
         self.bias_grad = delta.mean(0).mean(1).mean(1).view(self.no_channels)
         
         if isinstance(self.prev,Pooling):
-            fil_error = F.conv2d(input = self.prev.activations,
-                weight = delta,
+
+            try:
+                self.filter_grad = F.conv2d(input = self.prev.activations.permute(1,0,2,3),
+                    weight = delta.permute(1,0,2,3),
+                    stride = (self.stride,self.stride),
+                    padding = (self.padding,self.padding)
+                ).permute(1,0,2,3)
+
+            except:
+                self.filter_grad = F.conv2d(input = self.prev.X.permute(1,0,2,3),
+                    weight = delta.permute(1,0,2,3),
+                    stride = (self.stride,self.stride),
+                    padding = (self.padding,self.padding)
+                ).permute(1,0,2,3)
+
+            self.filter_grad = F.conv2d(input = self.prev.activations.permute(1,0,2,3),
+                weight = delta.permute(1,0,2,3),
                 stride = (self.stride,self.stride),
                 padding = (self.padding,self.padding)
-                )
-
-            self.filter_grad = fil_error
+            ).permute(1,0,2,3)
 
             error = F.conv_transpose2d(input = delta,
                 weight = self.filter,
@@ -67,22 +83,26 @@ class Convolutional(object):
 
         else:
 
-            fil_error = F.conv2d(input = self.prev.activations,
-                weight = delta,
-                stride = (self.stride,self.stride),
-                padding = (self.padding,self.padding)
-                )
+            try:
+                self.filter_grad = F.conv2d(input = self.prev.activations.permute(1,0,2,3),
+                    weight = delta.permute(1,0,2,3),
+                    stride = (self.stride,self.stride),
+                    padding = (self.padding,self.padding)
+                ).permute(1,0,2,3)
 
-            self.filter_grad = fil_error
-            print(self.filter_grad.size(),self.filter.size())
+            except:
+                self.filter_grad = F.conv2d(input = self.prev.X.permute(1,0,2,3),
+                    weight = delta.permute(1,0,2,3),
+                    stride = (self.stride,self.stride),
+                    padding = (self.padding,self.padding)
+                ).permute(1,0,2,3)
 
             #check for derivation of prev layer error when prev="CONV"
             error = F.conv_transpose2d(input = delta,
                 weight = self.filter,
                 stride=(self.stride,self.stride),
                 padding = (self.padding,self.padding)
-            )
-            
+            )            
 
         return error
 

@@ -16,7 +16,7 @@ class CNN(object):
         print("\n")
         model = []
         dimentions = self.data.img_dim
-        pre=None
+        pre=self.data
 
         for i,layer in enumerate(self.architecture):
 
