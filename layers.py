@@ -32,6 +32,9 @@ class Convolutional(object):
 
         print("CONV", self.filter.size())
 
+    def get(self,model):
+        print(model.data.X.size())
+
     def forward(self,input_block):
 
         convolutions = F.conv2d(input=input_block,
@@ -50,41 +53,33 @@ class Convolutional(object):
         delta = error * self.activation.derivative(self.activations)	        
         self.bias_grad = delta.mean(0).mean(1).mean(1).view(self.no_channels)
         
-        if isinstance(self.prev,Pooling):
-            fil_error = F.conv2d(input = self.prev.activations,
-                weight = delta,
+        try:
+            self.filter_grad = -1*F.conv2d(input = self.prev.activations.permute(1,0,2,3),
+                weight = delta.permute(1,0,2,3),
                 stride = (self.stride,self.stride),
                 padding = (self.padding,self.padding)
-                )
+            ).permute(1,0,2,3)
 
-            self.filter_grad = fil_error
-
-            error = F.conv_transpose2d(input = delta,
-                weight = self.filter,
-                stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding)
-            )
-
-        else:
-
-            fil_error = F.conv2d(input = self.prev.activations,
-                weight = delta,
+        except:
+            self.filter_grad = -1*F.conv2d(input = self.prev.X.permute(1,0,2,3),
+                weight = delta.permute(1,0,2,3),
                 stride = (self.stride,self.stride),
                 padding = (self.padding,self.padding)
-                )
+            ).permute(1,0,2,3)
 
-            self.filter_grad = fil_error
-            print(self.filter_grad.size(),self.filter.size())
 
-            #check for derivation of prev layer error when prev="CONV"
-            error = F.conv_transpose2d(input = delta,
-                weight = self.filter,
-                stride=(self.stride,self.stride),
-                padding = (self.padding,self.padding)
-            )
-            
+        #check for derivation of prev layer error when prev="CONV"
+        error = F.conv_transpose2d(input = delta,
+            weight = self.filter,
+            stride=(self.stride,self.stride),
+            padding = (self.padding,self.padding)
+        )            
 
         return error
+
+    def update(self,learning_rate):
+        self.filter -= learning_rate*self.filter_grad
+        self.bias -= learning_rate*self.bias_grad
 
 class Pooling(object):
 
@@ -119,10 +114,10 @@ class Pooling(object):
 
         if self.type == "MAX":
             self.activations,self.indices = F.max_pool2d(input=input_block,
-                kernal_size=self.filter_shape,
+                kernel_size=self.filter_shape,
                 stride=(self.stride,self.stride),
                 padding = (self.padding,self.padding),
-                return_indices=True
+                return_indices=True,
             )
         
         return self.activations
@@ -179,9 +174,11 @@ class Dense(object):
         if isinstance(pre, Dense):
             in_n = pre.out_dimentions[1]
         else:
-            (n_h, n_w, n_c) = pre.out_dimentions
+            try:
+                (n_h, n_w, n_c) = pre.out_dimentions
+            except:
+                (n_h, n_w, n_c) = pre.img_dim
             in_n = n_c*n_h*n_w
-
         #parameters
         self.theta = 0.09 * torch.randn(int(in_n),int(no_logits)).cuda()
         self.bias = 0.09 * torch.randn(1,no_logits).cuda()
@@ -197,32 +194,41 @@ class Dense(object):
         if not isinstance(self.prev, Dense):
             input_block = input_block.view(int(input_block.size()[0]),-1)
         self.Z = torch.mm(input_block,self.theta) + self.bias
-        self.activations = self.activation.activate(self.Z)
+        if self.activation.type == "softmax":
+            self.activations = self.activation.activate(self.Z,1)
+        else:
+            self.activations = self.activation.activate(self.Z)
         return self.activations
         
 
     def backward(self,error):
 
-        delta = error * self.activation.derivative(self.activations)
+        if(self.next != None):
+            delta = error * self.activation.derivative(self.activations)
+        else:
+            delta=error
+
         self.bias_grad = delta.mean(0).view(1,self.no_logits)
 
-        if isinstance(self.prev,Dense):
-            self.theta_grad = torch.mm(self.prev.activations.transpose(1,0),delta)
+        try:
+            a = self.prev.in_dimentions
+            test = False
+        except:
+            test = True
 
-            return torch.mm(delta,self.theta.transpose(1,0))
-        elif isinstance(self.prev,Pooling):
-            prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)
-            self.theta_grad = torch.mm(prev_activations,delta)
+        if test:
+            prev_activations = self.prev.X.view(self.prev.X.size()[0],-1).transpose(1,0)
+            self.theta_grad = -1*torch.mm(prev_activations,delta)
 
-            return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],
-                int(self.in_dimentions[2]),
-                int(self.in_dimentions[0]),
-                int(self.in_dimentions[1])
-            )
+        elif isinstance(self.prev,Dense):
+            self.theta_grad = -1*torch.mm(self.prev.activations.transpose(1,0),delta)
+
+            return torch.mm(delta,self.theta.transpose(0,1))
+
         else:
             """ grad calculation"""	
             prev_activations = self.prev.activations.view(self.prev.activations.size()[0],-1).transpose(1,0)	
-            self.theta_grad = torch.mm(prev_activations,delta)	
+            self.theta_grad = -1*torch.mm(prev_activations,delta)	
 
             """prev layer error calculation"""	
             return torch.mm(delta,self.theta.transpose(1,0)).view(delta.size()[0],	
@@ -230,3 +236,7 @@ class Dense(object):
                 int(self.in_dimentions[0]),	
                 int(self.in_dimentions[1])	
             )
+
+    def update(self,learning_rate):
+        self.theta -= learning_rate*self.theta_grad
+        self.bias -= learning_rate*self.bias_grad
