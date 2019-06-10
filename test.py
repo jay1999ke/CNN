@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
     NN_ARCHITECTURE = [
         {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":6,"stride":1,"padding":0},
-        {"type": "CONV", "activation":"relu","filter_shape": (3,3),"no_channels":12,"stride":1,"padding":0},
+        {"type": "CONV", "activation":"relu","filter_shape": (5,5),"no_channels":12,"stride":1,"padding":0},
+        {"type":"DROPOUT","keep_prob":0.8},
         {"type": "Dense","activation":"softmax", "no_logits": 10},
     ]
 

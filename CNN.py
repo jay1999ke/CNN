@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as op
-from layers import Convolutional, Pooling, Dense
+from layers import Convolutional, Pooling, Dense, Dropout
 from functional import Activation,Cost
 
 
@@ -68,6 +68,19 @@ class CNN(object):
                 dimentions = pool.out_dimentions
                 pre = pool
                 model.append(pool)
+                
+            elif l_type == "DROPOUT":
+                dropout = Dropout(in_dimentions=dimentions,
+                    pre=pre,
+                    keep_prob=layer["keep_prob"]
+                )
+
+                if i != 0:
+                    pre.next = dropout
+                    
+                dimentions = dropout.out_dimentions
+                pre = dropout
+                model.append(dropout)
 
         print("\n")
                 
@@ -88,7 +101,8 @@ class CNN(object):
 
         for i,layer in enumerate(self.model):       
 
-            input_block = layer.forward(input_block)
+            if not isinstance(layer,Dropout):
+                input_block = layer.forward(input_block)
 
         self.activations_test = input_block
         return self.activations_test
@@ -112,7 +126,7 @@ class CNN(object):
 
         for i,layer in enumerate(self.model[::-1]):
 
-            if not isinstance(layer,Pooling):
+            if not (isinstance(layer,Pooling) or isinstance(layer,Dropout)):
                 layer.update(self.alpha)
 
     def fit(self,learning_rate,epochs):

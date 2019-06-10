@@ -212,15 +212,15 @@ class Dense(object):
 
         try:
             a = self.prev.in_dimentions
-            test = False
+            first_layer = False
         except:
-            test = True
+            first_layer = True
 
-        if test:
+        if first_layer:
             prev_activations = self.prev.X.view(self.prev.X.size()[0],-1).transpose(1,0)
             self.theta_grad = -1*torch.mm(prev_activations,delta)
 
-        elif isinstance(self.prev,Dense):
+        elif isinstance(self.prev,Dense) or (isinstance(self.prev,Dropout) and isinstance(self.prev.prev,Dense)):
             self.theta_grad = -1*torch.mm(self.prev.activations.transpose(1,0),delta)
 
             return torch.mm(delta,self.theta.transpose(0,1))
@@ -240,3 +240,35 @@ class Dense(object):
     def update(self,learning_rate):
         self.theta -= learning_rate*self.theta_grad
         self.bias -= learning_rate*self.bias_grad
+
+class Dropout(object):
+
+    def __init__(self,in_dimentions,pre,keep_prob):
+        
+        #imp info
+        self.in_dimentions = in_dimentions
+        self.prev = pre
+        self.next=None
+        self.keep_prob = keep_prob
+
+        #activations calculations
+        self.out_dimentions = in_dimentions
+
+        print("DROPOUT", self.keep_prob)
+
+    def forward(self,input_block):
+        if isinstance(self.prev, Dense):
+            self.filter = torch.randn(self.in_dimentions[2],self.in_dimentions[0], self.in_dimentions[1]).cuda()
+        else:
+            self.filter = torch.randn(self.in_dimentions[0], self.in_dimentions[1]).cuda()
+        self.filter[self.filter >= (1-self.keep_prob)] = 1
+        self.filter[self.filter != 1] = 0
+        self.activations = self.filter * input_block
+        return self.activations
+
+
+    def backward(self,error):
+
+        prev_layer_error = self.filter * error
+
+        return prev_layer_error
